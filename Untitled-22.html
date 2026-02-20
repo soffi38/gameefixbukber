@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misi Rahasia Loker</title>
+    <style>
+        :root {
+            --locker-blue: #5d8aa8;
+            --accent-yellow: #f1c40f;
+            --text-white: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            /* Background sekolah */
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                        url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .header {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            background: rgba(44, 62, 80, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            border: 5px solid #1a252f;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .card {
+            aspect-ratio: 3/4;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .card-back {
+            background-color: var(--locker-blue);
+            flex-direction: column;
+            color: rgba(208, 182, 182, 0.8);
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .card-back::after {
+            content: "||||";
+            color: rgba(0,0,0,0.3);
+            font-size: 1.2rem;
+            position: absolute;
+            top: 15px;
+            letter-spacing: 2px;
+        }
+
+        .card-front {
+            background-color: #ecf0f1;
+            transform: rotateY(180deg);
+        }
+
+        /* Hitungan Mundur */
+        #countdown {
+            position: absolute;
+            font-size: 8rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 101;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        /* Overlay Menang */
+        .win-overlay {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+        }
+
+        .btn {
+            background: var(--accent-yellow);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 20px;
+            color: #333;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 id="round-title">Memuat...</h1>
+        <p>Hafalkan posisi benda dalam 15 detik!</p>
+    </div>
+
+    <div class="game-board" id="board">
+        <div id="countdown">15</div>
+    </div>
+
+    <div class="win-overlay" id="win-screen">
+        <h1 style="font-size: 4rem; margin: 0;">🎉 TEPAT!</h1>
+        <p style="font-size: 1.5rem;" id="win-message"></p>
+        <button class="btn" onclick="nextRound()">Ronde Berikutnya</button>
+    </div>
+
+    <script>
+        const emojis = ["🍗","🍜","🥤","🌙","🕌","🍰","🍉","🥟","🍦","🍩","🍎","🍔"];
+        // Tentukan target per ronde
+        const roundTargets = ["🌙", "🍦"]; 
+        let currentRound = 0;
+        let isLock = false;
+
+        function startGame() {
+            currentRound = 0;
+            initRound();
+        }
+
+        function initRound() {
+            const board = document.getElementById('board');
+            const countdownDisplay = document.getElementById('countdown');
+            const roundTitle = document.getElementById('round-title');
+            
+            document.getElementById('win-screen').style.display = 'none';
+            board.querySelectorAll('.card').forEach(c => c.remove());
+            
+            roundTitle.textContent = `Ronde ${currentRound + 1}`;
+            
+            // 1. Ambil 8 emoji acak, PASTI MASUKKAN TARGET RONDE INI
+            let target = roundTargets[currentRound];
+            let pool = emojis.filter(e => e !== target);
+            let shuffled = pool.sort(() => 0.5 - Math.random()).slice(0, 7);
+            shuffled.push(target);
+            shuffled.sort(() => 0.5 - Math.random()); // Acak posisi target
+
+            // 2. Buat kartu, posisi awal TERBUKA (flipped)
+            shuffled.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'card flipped'; 
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-back">${index + 1}</div>
+                        <div class="card-front">${emoji}</div>
+                    </div>
+                `;
+                
+                card.onclick = function() {
+                    if(isLock || this.classList.contains('flipped')) return;
+                    
+                    this.classList.add('flipped');
+                    
+                    if(emoji === target) {
+                        isLock = true;
+                        setTimeout(() => {
+                            let msg = currentRound === 0 ? "Target pertama ditemukan!" : "Target kedua ditemukan!";
+                            document.getElementById('win-message').textContent = msg;
+                            document.getElementById('win-screen').style.display = 'flex';
+                        }, 600);
+                    } else {
+                        isLock = true;
+                        setTimeout(() => {
+                            this.classList.remove('flipped');
+                            isLock = false;
+                        }, 800);
+                    }
+                };
+                board.appendChild(card);
+            });
+
+            isLock = true;
+            countdownDisplay.style.display = 'block';
+            let count = 15;
+            countdownDisplay.textContent = count;
+
+            let timer = setInterval(() => {
+                count--;
+                if(count > 0) {
+                    countdownDisplay.textContent = count;
+                } else {
+                    clearInterval(timer);
+                    countdownDisplay.style.display = 'none';
+                    
+                    // 4. Setelah hitungan selesai, TUTUP semua kartu
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
+                    isLock = false;
+                }
+            }, 1000);
+        }
+
+        function nextRound() {
+            currentRound++;
+            if(currentRound < roundTargets.length) {
+                initRound();
+            } else {
+                // Game Selesai
+                document.getElementById('round-title').textContent = "SELESAI!";
+                document.getElementById('win-message').textContent = "Kamu menyelesaikan semua misi!";
+                document.getElementById('win-screen').querySelector('button').textContent = "Main Lagi";
+                document.getElementById('win-screen').querySelector('button').onclick = startGame;
+            }
+        }
+
+        window.onload = startGame;
+    </script>
+</body>
+</html>
