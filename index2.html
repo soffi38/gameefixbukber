@@ -15,7 +15,6 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            /* Background sekolah */
             background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
                         url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
             background-size: cover;
@@ -84,7 +83,7 @@
         .card-back {
             background-color: var(--locker-blue);
             flex-direction: column;
-            color: rgba(208, 182, 182, 0.8);
+            color: rgba(255,255,255,0.8);
             font-weight: bold;
             font-size: 1.5rem;
         }
@@ -103,7 +102,6 @@
             transform: rotateY(180deg);
         }
 
-        /* Hitungan Mundur */
         #countdown {
             position: absolute;
             font-size: 8rem;
@@ -117,59 +115,68 @@
             display: none;
         }
 
-        /* Overlay Menang */
-        .win-overlay {
+        /* Overlay Awal & Menang */
+        .overlay {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.85);
-            display: none;
+            background: rgba(0,0,0,0.9);
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 100;
+            z-index: 150;
             color: white;
+            text-align: center;
+            padding: 20px;
         }
 
         .btn {
             background: var(--accent-yellow);
             border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
+            padding: 15px 40px;
+            border-radius: 30px;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             cursor: pointer;
             margin-top: 20px;
             color: #333;
             transition: transform 0.2s;
+            box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);
         }
-        .btn:hover { transform: scale(1.05); }
+        .btn:hover { transform: scale(1.1); }
     </style>
 </head>
 <body>
 
+    <div id="start-screen" class="overlay">
+        <h1 style="font-size: 3rem; margin-bottom: 10px;">Misi Rahasia Loker</h1>
+        <p style="font-size: 1.2rem; max-width: 400px;">Hafalkan posisi benda di dalam loker dalam 20 detik, lalu temukan benda rahasianya!</p>
+        <button class="btn" onclick="startGame()">Mulai Game</button>
+    </div>
+
     <div class="header">
-        <h1 id="round-title">Memuat...</h1>
-        <p>Hafalkan posisi benda dalam 15 detik!</p>
+        <h1 id="round-title">Ronde 1</h1>
+        <p>Hafalkan posisi benda dalam 20 detik!</p>
     </div>
 
     <div class="game-board" id="board">
-        <div id="countdown">15</div>
+        <div id="countdown">20</div>
     </div>
 
-    <div class="win-overlay" id="win-screen">
+    <div id="win-screen" class="overlay" style="display: none;">
         <h1 style="font-size: 4rem; margin: 0;">🎉 TEPAT!</h1>
         <p style="font-size: 1.5rem;" id="win-message"></p>
-        <button class="btn" onclick="nextRound()">Ronde Berikutnya</button>
+        <button class="btn" id="next-btn" onclick="nextRound()">Ronde Berikutnya</button>
     </div>
 
     <script>
         const emojis = ["🍗","🍜","🥤","🌙","🕌","🍰","🍉","🥟","🍦","🍩","🍎","🍔"];
-        // Tentukan target per ronde
         const roundTargets = ["🌙", "🍦"]; 
         let currentRound = 0;
         let isLock = false;
 
         function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
             currentRound = 0;
             initRound();
         }
@@ -184,14 +191,12 @@
             
             roundTitle.textContent = `Ronde ${currentRound + 1}`;
             
-            // 1. Ambil 8 emoji acak, PASTI MASUKKAN TARGET RONDE INI
             let target = roundTargets[currentRound];
             let pool = emojis.filter(e => e !== target);
             let shuffled = pool.sort(() => 0.5 - Math.random()).slice(0, 7);
             shuffled.push(target);
-            shuffled.sort(() => 0.5 - Math.random()); // Acak posisi target
+            shuffled.sort(() => 0.5 - Math.random());
 
-            // 2. Buat kartu, posisi awal TERBUKA (flipped)
             shuffled.forEach((emoji, index) => {
                 const card = document.createElement('div');
                 card.className = 'card flipped'; 
@@ -204,7 +209,6 @@
                 
                 card.onclick = function() {
                     if(isLock || this.classList.contains('flipped')) return;
-                    
                     this.classList.add('flipped');
                     
                     if(emoji === target) {
@@ -227,7 +231,7 @@
 
             isLock = true;
             countdownDisplay.style.display = 'block';
-            let count = 15;
+            let count = 20;
             countdownDisplay.textContent = count;
 
             let timer = setInterval(() => {
@@ -237,8 +241,6 @@
                 } else {
                     clearInterval(timer);
                     countdownDisplay.style.display = 'none';
-                    
-                    // 4. Setelah hitungan selesai, TUTUP semua kartu
                     document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
                     isLock = false;
                 }
@@ -250,15 +252,13 @@
             if(currentRound < roundTargets.length) {
                 initRound();
             } else {
-                // Game Selesai
                 document.getElementById('round-title').textContent = "SELESAI!";
                 document.getElementById('win-message').textContent = "Kamu menyelesaikan semua misi!";
-                document.getElementById('win-screen').querySelector('button').textContent = "Main Lagi";
-                document.getElementById('win-screen').querySelector('button').onclick = startGame;
+                const btn = document.getElementById('next-btn');
+                btn.textContent = "Main Lagi";
+                btn.onclick = () => location.reload(); 
             }
         }
-
-        window.onload = startGame;
     </script>
 </body>
 </html>
